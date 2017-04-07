@@ -1,6 +1,8 @@
 JHU Machine Learning - The Caret Package
 
-SPAM Example
+SPAM Example:
+
+Load caret and kernlab (for SPAM dataset); create testing/training sets
 
 ```{r, cache=TRUE, results='hide'}
 library(caret); library(kernlab); data(spam)
@@ -10,3 +12,40 @@ training <- spam[inTrain,]
 testing <- spam[-inTrain,]
 ```
 
+Fit a model
+
+```{r, warning=FALSE}
+set.seed(32343)
+modelFit <- train(type ~., data=training, method="glm")
+modelFit
+```
+
+To look at the model:
+
+- Tells you the actual fitted values that you got for glm 
+
+```{r, cache=TRUE}
+modelFit$finalModel
+```
+
+To use model to predict on new samples:
+
+```{r, cache=TRUE}
+predictions <- predict(modelFit, newdata=testing)
+predictions
+```
+
+To evaluate model fit:
+
+```{r, cache=TRUE}
+confusionMatrix(predictions, testing$type)
+
+```
+
+For more information/tutorials:
+
+Caret tutorials:
+  * [http://www.edii.uclm.es/~useR-2013/Tutorials/kuhn/user_caret_2up.pdf](http://www.edii.uclm.es/~useR-2013/Tutorials/kuhn/user_caret_2up.pdf)
+  * [http://cran.r-project.org/web/packages/caret/vignettes/caret.pdf](http://cran.r-project.org/web/packages/caret/vignettes/caret.pdf)
+* A paper introducing the caret package
+  * [http://www.jstatsoft.org/v28/i05/paper](http://www.jstatsoft.org/v28/i05/paper)
