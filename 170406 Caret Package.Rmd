@@ -1,0 +1,12 @@
+JHU Machine Learning - The Caret Package
+
+SPAM Example
+
+```{r, cache=TRUE, results='hide'}
+library(caret); library(kernlab); data(spam)
+
+inTrain <- createDataPartition(y=spam$type, p=.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+```
+
