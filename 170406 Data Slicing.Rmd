@@ -1,0 +1,41 @@
+JHU Machine Learning - Data Slicing
+
+SPAM example con't
+
+How to split data into training/testing sets
+
+```{r, cache=TRUE, results='hide'}
+library(caret); library(kernlab); data(spam)
+
+inTrain <- createDataPartition(y=spam$type, p=.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+```
+
+K-fold splitting
+
+```{r}
+set.seed(32323)
+folds <- createFolds(y=spam$type, k=10, list=TRUE, returnTrain = TRUE)
+sapply(folds, length)
+```
+```{r}
+#demonstrating proportion of observations in training set
+4141/dim(spam)[1]
+```
+```{r}
+folds[[1]][1:10]
+```
+
+Retruning the Test Set
+```{r}
+set.seed(32323)
+# note that returnTrain parameter now set to FALSE
+folds <- createFolds(y=spam$type, k=10, list=TRUE, returnTrain=FALSE)
+sapply(folds, length)
+```
+```{r}
+folds[[1]][1:10]
+```
+
+Resampling
