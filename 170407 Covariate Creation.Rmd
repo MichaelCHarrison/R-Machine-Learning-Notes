@@ -1,0 +1,102 @@
+JHU Machine Learning - Covariate Creation
+
+Covariates are sometimes called predictors and features; they are the variables that you will include in your model you'll combine to predict whatever outcome you are concerned with.
+
+Two levels of covariate  creation:
+Level 1 - From raw data to covariate
+Level 2 - Transforming tidy covariates
+
+- below, you could transform a variable (squaring in this case) for the purpose of utilization later in the prediction algorithm
+
+```{r cache=TRUE}
+library(kernlab); data(spam)
+spam$capitalAveSq <- spam$capitalAve^2
+
+```
+
+Loading example data:
+
+```{r}
+library(ISLR); library(caret); data(Wage);
+inTrain <- createDataPartition(y = Wage$wage,
+                               p = 0.7,
+                               list=FALSE)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+```
+
+*Common covariates to add: dummy variables*
+- One common idea in building machine learning algorithms is turning covariates that are qualitative (factor variables) into dummy variables
+- job class has two different levels, in this case they are character; sometimes hard for algos to use qualitative variables to actually do the prediction
+        - so to turn it into a quantitative variable is to use the dummyVars function
+
+```{r}
+table(training$jobclass)
+```
+```{r}
+dummies <- dummyVars(wage ~ jobclass, data=training)
+head(predict(dummies, newdata=training))
+```
+
+- Another occurence is that some variables basically have no variability, which will not be useful covariates
+- you can use the nearZeroVar function in caret to identify those variables with low variability and will likely not be good predictors
+```{r}
+nsv <- nearZeroVar(training, saveMetrics=TRUE)
+nsv 
+```
+
+**Spline Basis**
+- Other thing you might do when fitting linear regression or general models is that you might want to have curved lines; one way to do that is the basis function
+        - bs function creates a polynomial variables
+        - in example, so you pass single variable (age) and want 3rd degree polynomial
+        - you'll get 3 column matrix out which corresponds to age(first column), second
+        to age^2 - allowing algorithm to fit quadratic relationship between age and
+        outcome, and 3 column will correspond to age^3(cubed) - allowing cubic 
+        relationship between age and outcome
+
+
+```{r}
+library(splines)
+bsBasis <- bs(training$age, df=3)
+head(bsBasis, 10)
+```
+
+**Fitting curves with splines**
+- This is one way you can generate new variables, allowing more flexibility in the way you model specific variables
+```{r}
+#here, as bsBasis was transformed with age, the line will curve acording to it
+lm1 <- lm(wage ~ bsBasis, data=training)
+plot(training$age, training$wage, pch=19, cex=0.5)
+points(training$age, predict(lm1, newdata=training), col="red", pch=19, cex=0.5)
+```
+
+**Splines on the test set**
+- so then on the test set you'll have to predict the same variables
+- this is incredibly critical for machine learning when creating new covariates; you have to create the same covariates on the test set using the exact same procedure used on the training set
+        - you can do this using the predict function using the previously created variable
+        to create a new set of values
+        - this is opposed to creating a new set of predictors based on applying the BS
+        function directly to the age variable which would be creating a new set of
+        variables on the test set that isn't related to the variables that were created
+        on ht e training set, potentially introducing some bias
+```{r}
+predict(bsBasis, age=testing$age)
+```
+
+**Final Notes:**
+- Level 1 feature creation(raw data to covariates)
+        - science is key
+                - google "feature extraction for [data type]" for specific application
+        - err on overcreation of features
+        - in some applications(images, voice) automate feature creation is possible
+        and possibly necessary
+        - http://caret.r-forge.r-project.org/preprocess.html
+- Level 2 feature creation (covariates to new covariates)
+        - The function preProcess in caret will handle some preprocessing
+        - Create new covariates if you think they will improve fit
+        - use exploratory analysis on the trianing set for creating them 
+        - be careful about overfitting
+- if you want to fit spline models, use the gam method in the caret package which allows smoothing of multiple variables
+
+
+

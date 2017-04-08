@@ -1,0 +1,133 @@
+JHU Machine Learning - Basic Preprocesing
+
+- In earlier notes, needed to take exploratory look at any king of peculiar behavior from the variables as sometime predictors will look strange or the distributions will be irregular so you might need to transform them in order to make more use of them for prediction algorithms
+- This is particularl true when you use model based algorithms like linear discriminate anlysis, naive Bayes, linear regression, etc
+- pre-processing can often be more useful with model based approache than when you're using non parametric approaches
+
+```{r loadPackage,cache=TRUE,fig.height=3.5,fig.width=3.5}
+
+library(caret); library(kernlab); data(spam)
+inTrain <- createDataPartition(y=spam$type,
+                              p=0.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+hist(training$capitalAve,main="",xlab="ave. capital run length")
+```
+
+- From the histogram above you can see that the data is quite skewed 
+- Taking a look at some summary statistics of the data
+```{r}
+mean(training$capitalAve)
+```
+```{r}
+sd(training$capitalAve)
+```
+
+- looking at mean and sd you can see how variable the data is, so might want to do some preprocessing so machine learning algorithms don't get tricked because it is so skewed and highly variable
+
+*Standardizing*
+
+- one way to due this is to standardize a variable is to take the variable values and subtract the mean and then divide the entire quantity by the variables standard deviation
+- when you do this the mean of the variable will be 0 and the sd will be 1
+- keep in mine that when you apply prediction algorithm to the test set, you can only use parameters that you estimated in the training set
+        - in other words, when you apply the same standardization you have to use the mean
+        and sd from the training set to standardize the testing set
+```{r}
+trainCapAve <- training$capitalAve
+trainCapAveS <- (trainCapAve - mean(trainCapAve))/sd(trainCapAve)
+mean(trainCapAveS)
+```
+```{r}
+sd(trainCapAveS)
+```
+
+Standardizing the test set:
+```{r}
+testCapAve <- testing$capitalAve
+testCapAveS <- (testCapAve - mean(trainCapAve))/sd(trainCapAve)
+mean(testCapAveS)
+```
+```{r}
+sd(testCapAveS)
+```
+
+- When you do the standardization the mean will not exactly 0 nor will the sd be 1 because you standardized estimated in the training set; though hopefully they will be close
+
+*Standardizing using the preProcess function*
+- here you pass all the training variables except for one (the Y) 
+- the center and scale options in the method parameter does the same as the long hand way of above
+```{r}
+preObj <- preProcess(training[,-58], method=c("center", "scale"))
+trainCapAveS <- predict(preObj, training[,-58])$capitalAve
+mean(trainCapAveS)
+```
+```{r}
+sd(trainCapAveS)
+```
+
+- you can use the same preProcessing technique from above to standardize the test set:
+```{r}
+testCapAveS <- predict(preObj, testing[,-58])$capitalAve
+mean(testCapAveS)
+```
+```{r}
+sd(testCapAveS)
+```
+- values match those of the long hand method
+
+You can also pass the preprocessing options directly to the train function when developing a model
+```{r, warning=FALSE, cache=TRUE}
+set.seed(32343)
+modelFit <- train(type~., data=training,
+                  preProcess=c("center", "scale"), method = "glm")
+modelFit
+```
+
+*Standardizing using Box-Cox transformations*
+- You can do other kinds of transformations other than centering and scaling - which takes care of certain problems, such as removing very strongly biased predictors or predictors that have high variablity- like the box-cox
+- the box-cox transformations take continuous data and make it look like normal data using maximum likelihood
+
+```{r}
+preObj <- preProcess(training[,-58], method=c("BoxCox"))
+trainCapAveS <- predict(preObj, training[,-58])$capitalAve
+par(mfrow=c(1,2)); hist(trainCapAveS); qqnorm(trainCapAveS)
+```
+- the histogram now looks more like normal distribution though it doesn't take care of the stack found at 0
+- the normal qq plot has a chunck that does not establish a 45 degree angle; this is due to the presence of a many 0 values and the continuous transform doesn't take care of values that are repeated
+
+*Standardizing - Imputing Data*
+- very common to have missing data; when you have missing data, prediction algorithms often fail - they are built NOT to handle missing data
+- so if you have missing data, you can impute them using k-nearest neighbor's imputation
+        - first you set the seed because it is a randomized algorithm
+- So to handle this missing data, you tell the preProcess function to do a k-nearest neightbors imputation
+        - k nearest computation finds the k and so if k = 10, then the 10 nearest data 
+        vectors that look most like the data vector with the missing value and averages 
+        the values of the variables that's missing and computes them at that position
+        - doing that, you can then predict on the training st all the new values,
+        including the ones that have imputed with the k-nearest imputation algorithm
+        
+```{r}
+set.seed(13343)
+
+#make some values NA
+training$capAve <- training$capitalAve
+selectNA <- rbinom(dim(training)[1], size = 1, prob = .05) ==1
+training$capAve[selectNA] <- NA
+
+#Impute and standardize
+preObj <- preProcess(training[,-58], method="knnImpute")
+capAve <- predict(preObj, training[,-58])$capAve
+
+#Standardize true values
+capAveTruth <- training$capitalAve
+capAveTruth <- (capAveTruth - mean(capAveTruth))/sd(capAveTruth)
+```
+
+**Final Notes**
+- Training and tesing must be processed in the same way
+- Test transformations will likely be imperfect
+        - especially if the test/training sets collected at different times
+- careful when transforming factor variables!
+
+Additional links:
+http://caret.r-forge.r-project.org/preprocess.html
