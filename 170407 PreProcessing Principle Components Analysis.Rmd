@@ -1,0 +1,133 @@
+JHU Machine Learning - Preprocessing with Principal Components Analysis(PCA)
+
+Idea is, often you have multiple quantitative variables that are sometimes highly correlated to each other, so similar that they're like the exact same variable
+
+**Correlated predictors**
+Using the SPAM dataset once again
+
+```{r, warning=FALSE}
+library(caret); library(kernlab); data(spam)
+inTrain <- createDataPartition(y=spam$type,
+                              p=0.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+
+#First calculate the correlation between all variables except for outcome variable;
+#take the absolute value
+M <- abs(cor(training[,-58]))
+#Set the diagonal of the matrix(M) to 0, as variables correlation to themselves = 1
+diag(M) <- 0
+which(M > 0.8, arr.ind=T)
+```
+- two variables have high correlation which are the num 415 and num 857; most like a phone number that has similar variables
+
+**Correlated Predictors**
+```{r}
+names(spam)[c(34,32)]
+```
+plot(spam[,34],spam[,32])
+```{r}
+plot(spam[,34],spam[,32])
+```
+- Due to high correlation, may not be useful to include both variables in the model
+        - so how can you take these variables and turn them into a single variable 
+        that is more useful?
+        
+**Basic PCA Idea**
+- We might not need every predictor
+- A Weighted combination of predictors might be better
+- we should pick this combination to capture the "most information" possible
+- benefits:
+        - reduced number of predictors
+        - reduced nosie (due to averaging)
+        
+**Rotate the plot**
+- Creating two new variables: X, adding the two variables; Y, subtracting one from other
+- Most of the variablilty is happening on the X axis, but clustering at y=0
+- so, adding the variables together captures most of the information of those variables
+        - subtracting takes less
+```{r}
+X <- 0.71*training$num415 + 0.71*training$num857
+Y <- 0.71*training$num415 - 0.71*training$num857
+plot(X,Y)
+```
+
+**Related problems**
+You have multivariate variables X1..., Xn so X1 = (X11, ..., X1m)
+- Find a new set of multvariate variables that are uncorrelated and explain as much variance as possible
+- if you put all the variables together in one matrix, find the best matrix created with fewer variables(lower rank in mathematical terms) that explains the original data
+
+The first goal is STATISTICAL and the second goal is DATA COMPRESSION
+
+- this is the idea of if you can use fewer variables to explain almost everything that's going on
+
+**Related Solutions - PCA/SVD**
+SVD
+- if X is a matrix with each variable in a column and each observation in a row then the SVD is a "matrix decomposition" :: X=UDV^T :: where the columns of U are orthogonal (left singular vectors), the columns of V are orthogonal(right singular vectors) and D is a diagonal matrix(singular values)
+        - The idea is that the variables constructed to explain the maximum amount of 
+        variation in the data
+PCA
+- The principal components are equal to the right singular values if you first scale (subtract the mean, divide by the standard deviation) the variables
+
+Example: principal components in R
+- why do you do this instead of adding and subtracting? principal components allows you to perform the operation if you have more than 2 variables; may be able to reduce all the variables down into a small number of combinations of sums and differences (possibly weighted) 
+
+```{r}
+smallSpam <- spam[,c(34,32)]
+prComp <- prcomp(smallSpam)
+plot(prComp$x[,1],prComp$x[,2])
+```
+```{r}
+## This is why .71 was used in the addition and subtraction above 
+prComp$rotation
+```
+
+**PCA on SPAM data**
+```{r}
+#This first variable colors points; so when typeColor = 2, makes it red
+typeColor <- ((spam$type=="spam")*1 + 1)
+#calcultes the principal components on the entire dataset
+#the log10 trasform +1 was applied to make the data appear more Gaussian
+prComp <- prcomp(log10(spam[,-58]+1))
+#principal component 1 is no longer a simple addition of two variables(could be quite complitated combination) but its the combination that explains the most variation in the data; the second PC is the second best explanation of the variance
+plot(prComp$x[,1], prComp$x[,2], col=typeColor, xlab="PC1", ylab="PC2")
+```
+- plotting PC1 against PC2 and coloring the outcomes, you can see a separation between the two types of messages
+- This is a way to reduce the size of your data set while still capturing a large amount of variation - this is the idea behind feature creation
+
+**PCA with Caret**
+```{r}
+preProc <- preProcess(log10(spam[,-58]+1), method="pca", pcaComp=2)
+spamPC <- predict(preProc, log10(spam[,-58]+1))
+plot(spamPC[,1],spamPC[,2], col=typeColor)
+```
+- again, you see the separation between PC1 and PC2
+
+**Preprocessing with PCA**
+- You can create trainign predictions using the predict function then fit a model that relates the training variable to the principle component  
+```{r, warning=FALSE}
+preProc <- preProcess(log10(training[,-58]+1),method="pca",pcaComp=2)
+trainPC <- predict(preProc,log10(training[,-58]+1))
+modelFit <- train(training$type ~.,method="glm",data=trainPC)
+```
+
+- In the test data set, you have to use the same PCA that you calculated in the training dataset for the test variables
+```{r}
+testPC <- predict(preProc, log10(testing[,-58]+1))
+confusionMatrix(testing$type, predict(modelFit, testPC))
+```
+
+To do this all in one line and avoiding the preprocessing function:
+```{r, warning=FALSE}
+modelFit <- train(training$type ~., method="glm", preProcess="pca", data=training)
+confusionMatrix(testing$type, predict(modelFit, testing))
+```
+
+Final Notes:
+- Most useful for linear-type models
+- can make it hard to interpret predictors
+- watch out for outliers!
+        - Plot predictors to identify problems
+- For more info see:
+        - Exploratory Data Analysis
+        - Elements of Statistical Learning(book)

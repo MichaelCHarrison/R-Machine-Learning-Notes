@@ -1,0 +1,103 @@
+JHU Machine Learning - Predicting with regression
+
+Key Ideas
+- Fit a simple regression model
+- plug in new covarieats and multiply by the coeffecients
+- useful when the linear model is (nearly) correct
+Pros:
+- Easy to implement
+- East to interpret
+Cons:
+- Often poor performance in nonlinear settings
+
+Example: Old Faithful eruptions
+
+```{r}
+library(caret); data(faithful); set.seed(333)
+inTrain <- createDataPartition(y=faithful$waiting,
+                               p = 0.5, list=FALSE)
+trainFaith <- faithful[inTrain,]
+testFaith <- faithful[-inTrain,]
+head(trainFaith)
+```
+
+**Plot of the variables**
+```{r}
+plot(trainFaith$waiting, trainFaith$eruptions, pch=19, col="blue", 
+     xlab="Waiting", ylab="Duration")
+```
+
+**Fitting a linear model**
+```{r}
+lm1 <- lm(eruptions ~ waiting, data=trainFaith)
+summary(lm1)
+```
+```{r}
+plot(trainFaith$waiting, trainFaith$eruptions, pch=19, col="blue", 
+     xlab="Waiting", ylab="Duration")
+lines(trainFaith$waiting, lm1$fitted, lwd=3)
+```
+
+**Predicting a new value**
+
+```{r}
+coef(lm1)[1] + coef(lm1)[2] * 80
+```
+```{r}
+newdata <- data.frame(waiting=80)
+predict(lm1, newdata)
+```
+
+**Plot predictions - training and test set**
+```{r}
+par(mfrow = c(1,2))
+plot(trainFaith$waiting, trainFaith$eruptions, pch=19, col="blue", 
+     xlab="Waiting", ylab="Duration")
+lines(trainFaith$waiting, predict(lm1), lwd=3)
+
+plot(testFaith$waiting, testFaith$eruptions, pch=19, col="blue", 
+     xlab="Waiting", ylab="Duration")
+lines(testFaith$waiting, predict(lm1, newdata=testFaith), lwd=3)
+
+```
+
+Get Training set/Test set errors
+```{r}
+#Calculate RMSE on training
+sqrt(sum((lm1$fitted - trainFaith$eruptions)^2))
+```
+```{r}
+#Calculate RMSE on test
+sqrt(sum((predict(lm1, newdata=testFaith) - testFaith$eruptions)^2))
+```
+
+- since the test data was not used in creating the algorithm, the RMSE is more realistic here on a new data set as opposed to the training set
+- RMSE of test set almost always larger than the training
+
+Prediction Intervals
+```{r}
+pred1 <- predict(lm1, newdata=testFaith, interval="prediction")
+ord <- order(testFaith$waiting)
+plot(testFaith$waiting, testFaith$eruptions, pch=19, col="blue")
+matlines(testFaith$waiting[ord], pred1[ord,], 
+         type = "l",, col=c(1,2,2), lty=c(1,1,1), lwd=3)
+```
+- the interval captures the region where we expect the predicted values to land
+        - shows you the range of possible values that could be predicted as opposed
+        to a single prediction
+        - can be useful for giving you an idea of how well your model will do on new 
+        predictions
+        
+**Same Process with Caret**
+```{r}
+modFit <- train(eruptions ~ waiting, data=trainFaith, method="lm")
+summary(modFit$finalModel)
+```
+
+*Final Notes:*
+- Regression models with multiple covariates can be included
+- often useful in combination with other models
+- links:
+* [Elements of statistical learning](http://www-stat.stanford.edu/~tibs/ElemStatLearn/)
+* [Modern applied statistics with S](http://www.amazon.com/Modern-Applied-Statistics-W-N-Venables/dp/0387954570)
+* [Introduction to statistical learning](http://www-bcf.usc.edu/~gareth/ISL/)
