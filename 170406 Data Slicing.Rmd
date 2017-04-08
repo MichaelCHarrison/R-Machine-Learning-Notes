@@ -39,3 +39,22 @@ folds[[1]][1:10]
 ```
 
 Resampling
+
+```{r}
+set.seed(32323)
+
+folds <- createResample(y=spam$type, times=10, list=TRUE)
+sapply(folds, length)
+folds[[1]][1:20]
+```
+
+Creating Time Slices
+
+```{r}
+set.seed(32323)
+time <- 1:1000
+folds <- createTimeSlices(y=time, initialWindow = 20, horizon=10)
+names(folds)
+folds$train[[1]]
+```
+

@@ -1,0 +1,57 @@
+JHU Machine Learning - Training Control Options
+
+SPAM example con't
+
+```{r, cache=TRUE, warning=FALSE, results='hide'}
+library(caret); library(kernlab); data(spam)
+
+inTrain <- createDataPartition(y=spam$type, p=.75, list=FALSE)
+training <- spam[inTrain,]
+testing <- spam[-inTrain,]
+modelFit <- train(type~., data=training, method="glm")
+```
+
+Train Options:
+- Metric Options
+        Continuous Outcomes:
+                - RMSE = Root mean squared error
+                - Rsquared = R^2 from regression models
+        Categorical Outcomes:
+                - Accuracy = Fraction correct
+                - Kappa = A measure of concordance
+
+
+trainControl - Control the parameters for train
+```{r}
+args(trainControl)
+```
+
+trainControl Resampling:
+- Method
+        - boot = bootstrapping
+        - boot632 = bootstrapping with adjustement
+        - cv = cross validation
+        - repeatedcv = repeated cross validation
+        - LOOCV = leave one out cross validation
+- Number
+        - For boot/cross validation
+        - Number of subsamples to take
+- repeats
+        - Number of times to repeat subsampling
+        - If big this can slow things down
+        
+
+** Important **
+Important component of training models is setting the seed:
+- It is often useful to set an overall seed
+- You can also set a seed for each resample
+- Seeding each resample is useful for parallel fits
+
+Seed example
+```{r, warning=FALSE}
+set.seed(1235)
+modelFit2 <- train(type~., data=training, method="glm")
+modelFit2
+```
+
+If you reset the seed and fit the model again, now with a different number, modelFit3 instead of modelFit2, then you will get exactly the same bootstrap samples and exactly the same measures of accuracy back out again. This is important when you're training models and then you want to share your training data set with someone else and ensure that you get the same answer when they run the same code

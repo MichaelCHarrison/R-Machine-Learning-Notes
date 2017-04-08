@@ -1,0 +1,108 @@
+JHU Machine Learning - Plotting Predictors
+
+Wages Data Example
+
+```{r, cache=TRUE, warning=FALSE, results='hide'}
+library(ISLR); library(ggplot2); library(caret); library(gridExtra);
+
+data(Wage)
+summary(Wage)
+```
+
+Setting training/testing sets
+
+```{r}
+inTrain <- createDataPartition(y=Wage$wage, p=.7, list=FALSE)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+dim(testing)
+```
+
+Feature Plot
+- plots all the features against each other
+
+```{r}
+featurePlot(x=training[,c("age", "education", "jobclass")],
+            y = training$wage,
+            plot="pairs")
+```
+
+- top right cell "Y" is the outcome (wage) plotted against age, education, and job class
+- here, you want to look for any pattern amongst the top cells; do any of the variables seem to have a relationship with the y variable?
+        - there seems to be a trend between education and wage
+
+You can also examine the relationships using ggplot:
+- appears to have a slight pattern, though the upper scatter of plots seem to be of interest
+```{r, cache=TRUE}
+qplot(age, wage, data=training)
+```
+
+Looking at the plot again with color by different variables:
+- appears that majority of higher earning jobs are in information
+- this gives you a way to detect variables that might be important in your model because they show variation in your data
+```{r, cache=TRUE}
+qplot(age, wage, data=training, color = jobclass)
+```
+
+Adding regression smoothers to your data:
+- Using smooth function to apply linear smoother 
+
+```{r}
+qq <- qplot(age, wage, colour=education, data=training)
+qq + geom_smooth(method="lm", formula=y~x)
+```
+
+Using cut2 to make factors with the Hmisc package
+- Often very useful is to break up variabels into different categories because certain categories seem to have different relationships
+        - in the case of this data the wages might have different relationships
+
+```{r}
+library(Hmisc)
+cutWage <- cut2(training$wage, g=3)
+table(cutWage)
+```
+
+Using these cuts to then make different kinds of plots:
+- looking at wage groups vs age; appears that there is some kind of relationships between wage groups and age
+- you might however want to add ontop of the the boxplot the actual points themselves because box plots can often obscure how many points are being shown
+        - important to this to see points because one cut may not have enough points to
+        for real representation of what's going on
+```{r, cache=TRUE}
+p1 <- qplot(cutWage, age, data=training, fill=cutWage,
+            geom=c("boxplot"))
+p2 <- qplot(cutWage, age, data=training, fill=cutWage,
+            geom=c("boxplot", "jitter"))
+grid.arrange(p1,p2,ncol=2)
+```
+
+Using tables:
+
+```{r}
+t1 <- table(cutWage, training$jobclass)
+t1
+```
+
+If you want to get the proportion of a variables' presence:
+```{r}
+prop.table(t1,1)
+```
+
+Density Plots
+
+```{r}
+qplot(wage, colour=education, data=training, geom="density")
+```
+
+Final Notes:
+- When making your plots, only using the training set
+        - do NOT use the test set for exploration!
+- Things to look for:
+        - imbalance in outcomes/predictors
+        - outliers
+        - groups of points not explained by a predictor
+        - Skewed Variables
+
+Links:
+
+* [ggplot2 tutorial](http://rstudio-pubs-static.s3.amazonaws.com/2176_75884214fc524dc0bc2a140573da38bb.html)
+* [caret visualizations](http://caret.r-forge.r-project.org/visualizations.html)
