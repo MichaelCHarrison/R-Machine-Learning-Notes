@@ -76,6 +76,6 @@ qplot(wage, pred, color=year, data=testing)
 ```{r}
 modFitAll <- train(wage ~., data=training, method = "lm")
 pred <- predict(modFitAll, testing)
-qplot(wage, pred, data=testing)
+qplot(wage, pred, data=testings)
 ```
 
