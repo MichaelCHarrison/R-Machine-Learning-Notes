@@ -1,0 +1,81 @@
+JHU Machine Learning - Predicting with regression
+
+Example: predicting wages
+
+```{r}
+library(ISLR); library(ggplot2); library(caret);
+data(Wage)
+# Data subset to exclude the variable we are trying to predict
+Wage <- Wage <- subset(Wage, select=-c(logwage))
+summary(Wage)
+```
+
+```{r}
+inTrain <- createDataPartition(y = Wage$wage, p=0.7, list=FALSE)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+dim(testing)
+```
+
+**Exploratory Analysis**
+Feature Plot:
+
+```{r}
+featurePlot(x = training[,c("age", "education", "jobclass")],
+      y = training$wage,
+      plot = "pairs")
+```
+
+Plotting age against wage using colored job class
+```{r}
+qplot(age, wage, data=training, col = jobclass)
+```
+Plotting age against wage using colored education
+```{r}
+qplot(age, wage, data=training, col = education)
+
+```
+
+Fit a linear model with multiple variables
+
+```{r}
+modFit<- train(wage ~ age + jobclass + education,
+               method = "lm",data=training)
+finMod <- modFit$finalModel
+print(modFit)
+```
+
+**Diagnostics**
+- The idea here is to plot the fitted values (the predictions from the training set) vs the residuals (the amount of variation after you fit your model)
+- ideally you'd like to see the line would be centered at zero 
+- outliers labeled
+```{r}
+plot(finMod, 1, pch=19, cex=0.5, col = "#00000010")
+```
+
+Color by variables not used in the model
+```{r}
+qplot(finMod$fitted, finMod$residuals, color=race, data=training)
+```
+
+**Plot by Index**
+- Index is the row of the data set you're looking at
+- 
+```{r}
+plot(finMod$residuals, pch=19)
+```
+
+**Predicted vs truth in test set**
+- this is kind of a postmortem technique to see what may have happened in your analysis
+```{r}
+pred <- predict(modFit, testing)
+qplot(wage, pred, color=year, data=testing)
+```
+
+*If you want to use all covariates*
+```{r}
+modFitAll <- train(wage ~., data=training, method = "lm")
+pred <- predict(modFitAll, testing)
+qplot(wage, pred, data=testing)
+```
+
