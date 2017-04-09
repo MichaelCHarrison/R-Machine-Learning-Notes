@@ -1,0 +1,89 @@
+JHU Machine Learning - Bagging
+
+Basic idea: 
+- short for bootstrap aggregating; when you fit complicated models, sometimes when you average your models together you get a smoother model fit that give you a better balance between potential bias in your fit and variance in your fit
+
+```{r}
+library(ElemStatLearn); data(ozone, package="ElemStatLearn")
+ozone <- ozone[order(ozone$ozone),]
+head(ozone)
+```
+
+-Going to try and predict temperature as a function of ozone
+
+*Bagged Loess*
+```{r}
+ll <- matrix(NA, nrow = 10, ncol = 155)
+for(i in 1:10){
+        ss <- sample(1:dim(ozone)[1], replace = T)
+        ozone0 <- ozone[ss,]; ozone0 <- ozone0[order(ozone0$ozone),]
+        #local polynomial regression fitting
+        loess0 <- loess(temperature ~ ozone, data=ozone0, span=0.2)
+        ll[i,] <- predict(loess0, newdata=data.frame(ozone=1:155))
+}
+```
+- what this does is resamples the data 10 times with replacement and fits a smooth curve through it each time
+- then you'll average the curves 
+
+```{r}
+plot(ozone$ozone, ozone$temperature, pch=19, cex=0.5)
+for(i in 1:10){lines(1:155, ll[i,], col="grey", lwd=2)}
+lines(1:155, apply(ll,2,mean), col="red", lwd=2)
+```
+- the points on the graph represent that actual data points the dataset
+- the grey lines represent the smooth line fitted to the resampled data 
+- red line is the average between the lines
+
+*Bagging in Caret*
+- Some models perform bagging for you, in train function consider method options:
+        - bagEarth
+        - treebag
+        - bagFDA
+- Alternatively you can bag any model you choose using the bag function
+
+```{r}
+#build your own bagging function in caret; READ DOCUMENTATION
+#idea here is to take a predictor variable and put it into one data frame
+predictors <- data.frame(ozone=ozone$ozone)
+#then set outcome variable
+temperature <- ozone$temperature
+#pass these to the bag function in caret package; B parameter sets # of replications
+#bag control tells you how to fit the model
+treebag <- bag(predictors, temperature, B=10,
+               bagControl = bagControl(fit = ctreeBag$fit,
+                                       predict = ctreeBag$pred,
+                                       aggregate = ctreeBag$aggregate))
+```
+
+Custom bagging plotted:
+- the red dots represent the fit from a single conditional regression tree
+        - but when you average over 10 bagged model fits (blue), it captures the
+        trend observed between ozone = 0:50
+```{r}
+plot(ozone$ozone, ozone$temperature, col="lightgrey", pch=19)
+points(ozone$ozone, predict(treebag$fits[[1]]$fit, predictors), pch=19, col="red")
+points(ozone$ozone, predict(treebag, predictors), pch=19, col="blue")
+```
+
+**Parts of Bagging**
+```{r}
+ctreeBag$fit
+```
+```{r}
+ctreeBag$pred
+```
+```{r}
+ctreeBag$aggregate
+```
+
+Final Notes:
+- bagging is most useful for nonlinear models
+- often used with trees - an extension is random forests
+- several models use bagging in caret's train function
+-links:
+
+* [Bagging](http://en.wikipedia.org/wiki/Bootstrap_aggregating)
+* [Bagging and boosting](http://stat.ethz.ch/education/semesters/FS_2008/CompStat/sk-ch8.pdf)
+* [Elements of Statistical Learning](http://www-stat.stanford.edu/~tibs/ElemStatLearn/)
+
+
