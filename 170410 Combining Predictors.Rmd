@@ -1,0 +1,108 @@
+JHU Machine Learning - Combining Predictors
+
+*Example with Wage data*
+- create training, test, and validation sets
+
+```{r}
+library(ISLR); data(Wage); library(ggplot2); library(caret)
+Wage <- subset(Wage, select= -c(logwage))
+#Create a buidling data set and validation set
+inBuild <- createDataPartition(y=Wage$wage,
+                               p=0.7, list=FALSE)
+buildData <- Wage[inBuild,]
+validation <- Wage[-inBuild,]
+inTrain <- createDataPartition(y=buildData$wage,
+                               p=0.7, list=FALSE)
+training <- buildData[inTrain,]
+testing <- buildData[-inTrain,]
+```
+```{r}
+dim(training)
+```
+```{r}
+dim(testing)
+```
+```{r}
+dim(validation)
+```
+
+Build two different models
+
+```{r}
+#First model uses general linear model
+mod1 <- train(wage ~., method="glm", data=training)
+#Second uses random forest; 
+mod2 <- train(wage ~., method="rf", data = training,
+              trControl=trainControl(method="cv"), number=3)
+```
+
+*Predict on the testing set:*
+- plot the two models against each other
+```{r}
+pred1 <- predict(mod1, testing)
+pred2 <- predict(mod2, testing)
+qplot(pred1, pred2, colour=wage, data=testing)
+```
+ - you can see that the predictions are close to each other, but they don't exactly agree
+ - neither of them perfectly correlate to the color/wage 
+ 
+ *Fit a model that combines predictors*
+- create a new data set consisting of the predictions from the two models
+- create a wage variable which is the wage information from the testing data set
+- then create a model that relates the wage variable to the two prediction vectors
+ 
+```{r}
+predDF <- data.frame(pred1, pred2, wage=testing$wage)
+combModFit <- train(wage ~., method="gam", data=predDF)
+combPred <- predict(combModFit, predDF)
+```
+
+- You can then look at how well you do on the test set by looking at the errors
+
+```{r}
+sqrt(sum((pred1 - testing$wage)^2))
+```
+```{r}
+sqrt(sum((pred2 - testing$wage)^2))
+```
+```{r}
+sqrt(sum((combPred - testing$wage)^2))
+```
+- error of the combined prediction is better than that of the individual
+- need to try it out on the validation set because the test set was used to blend the two models; not a good representation of the out of sample error
+
+*predict on validation data set*
+```{r}
+#create prediction of first/second models on the validation set
+pred1V <- predict(mod1, validation)
+pred2V <- predict(mod2, validation)
+#then create data frame that contains the two predictions and use it to predict the combined model on the predictions on the validation set
+#covariates being passed to the model are the predictions from the two different models
+predVDF <- data.frame(pred1 = pred1V, pred2 = pred2V)
+combPredV <- predict(combModFit, predVDF)
+```
+
+- First model error 
+```{r}
+sqrt(sum((pred1V - validation$wage)^2))
+```
+- Second model error
+```{r}
+sqrt(sum((pred2V - validation$wage)^2))
+```
+- Combined model error
+```{r}
+sqrt(sum((combPredV - validation$wage)^2))
+```
+
+- Stacking models this way can improve accuracy by blending the strengths of different models together
+
+*Final Notes*
+- Even simple blending can be useful
+- Typical model for binary/multiclass data
+        - Build an odd number of models
+        - predict with each model
+        - predict the class by majority vote
+- This can get dramatically more complicated
+        - Simple blending in caret: caretEnsemble package
+        - Wikipedia ensemble learning

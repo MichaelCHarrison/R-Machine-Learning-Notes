@@ -1,0 +1,18 @@
+JHU Machine Learning - Regularized Regression
+
+Prostate Cancer Data Set Example
+
+```{r}
+library(ElemStatLearn); data(prostate)
+str(prostate)
+```
+
+ An issue of high-dimenstional data:
+
+```{r}
+small = prostate[1:5,]
+lm(lpsa ~. , data=small)
+```
+
+- NA values appear because R cannot estimate because you have more predictors than you have samples; this is because the design matrix cannot be inverted 
+
