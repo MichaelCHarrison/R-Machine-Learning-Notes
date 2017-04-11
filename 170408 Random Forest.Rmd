@@ -1,0 +1,54 @@
+JHU Machine Learning - Random Forest
+
+Iris Example
+```{r}
+library(caret);data("iris"); library(ggplot2)
+
+inTrain <- createDataPartition(y=iris$Species, p=0.7, list=FALSE)
+training <- iris[inTrain,]
+testing <- iris[-inTrain,]
+
+modFit <- train(Species ~., data=training, method="rf", prox=TRUE)
+modFit
+```
+- prox=TRUE provides a little extra information to help build model fits
+- the tuning parameter is the number of tries/repeated trees it tries to build
+
+
+*Getting a single tree out*
+- each row corresponds to a particular split; you can see what the left/right daughter of tree is and which variabel it's split on, what the value on the split is (corresponds to column variable)
+```{r}
+getTree(modFit$finalModel, k=2) 
+```
+
+*Class "centers"*
+```{r}
+#this establishes the plot "centers" - the X in the plot
+irisP <- classCenter(training[,c(3,4)], training$Species, modFit$finalModel$prox)
+irisP <- as.data.frame(irisP); irisP$Species <- rownames(irisP)
+p <- qplot(Petal.Width, Petal.Length, col=Species, data=training)
+p + geom_point(aes(x=Petal.Width, y = Petal.Length, col=Species),
+               size=5, shape=4, data=irisP)
+```
+
+*Predicting new values*
+```{r}
+pred <- predict(modFit, testing)
+testing$predRight <- pred == testing$Species
+table(pred, testing$Species)
+```
+
+```{r}
+qplot(Petal.Width, Petal.Length, colour=predRight, data=testing, 
+      main = "newdata Predictions")
+```
+
+Final Notes:
+- Random Forests are usually one of two top performing algorithms along with boosting in prediction contests
+- Random Forests are difficult to interpret but often very accurate
+- Care should be taken to avoid overfitting (see the rfcv function)
+- links:
+
+* [Random forests](http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm)
+* [Random forest Wikipedia](http://en.wikipedia.org/wiki/Random_forest)
+* [Elements of Statistical Learning](http://www-stat.stanford.edu/~tibs/ElemStatLearn/)

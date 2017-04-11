@@ -1,0 +1,35 @@
+JHU Machine Learning - Boosting
+
+Wage example
+
+
+```{r}
+library(ISLR); data(Wage); library(ggplot2); library(caret) 
+#Removes predictor we are trying to 
+Wage <- subset(Wage, selecton = -c(logwage))
+inTrain <- createDataPartition(y=Wage$wage,
+                               p=0.7, list=FALSE)
+training <- Wage[inTrain,]
+testing <- Wage[-inTrain,]
+```
+
+Fitting the model
+
+```{r}
+#gbm boosts with trees; verbose=FASLSE to stop the large volume of output
+modFit <- train(wage ~., method="gbm", data=training, verbose=FALSE)
+print(modFit)
+```
+
+Plotting the results
+```{r}
+qplot(predict(modFit,testing),wage,data=testing)
+```
+
+Final Notes:
+
+- Acouple of nice boosting tutorials:
+  * Freund and Shapire - [http://www.cc.gatech.edu/~thad/6601-gradAI-fall2013/boosting.pdf](http://www.cc.gatech.edu/~thad/6601-gradAI-fall2013/boosting.pdf)
+  * Ron Meir- [http://webee.technion.ac.il/people/rmeir/BoostingTutorial.pdf](http://webee.technion.ac.il/people/rmeir/BoostingTutorial.pdf)
+- Boosting, random forests, and model ensembling are the most common tools that win Kaggle and other prediction contests
+ 
